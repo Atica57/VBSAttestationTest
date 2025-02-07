@@ -99,6 +99,7 @@ HRESULT Run()
         printf("Output: %llX\n", reinterpret_cast<ULONG_PTR>(Output));
         printf("Input: %llX\n", Input);
         printf("Output ^ Input: %llX\n", reinterpret_cast<ULONG_PTR>(Output) ^ Input);
+        printf("Finished!");
     }
 
     // Destructor of "cleanup" variable will terminate and delete the enclave.
