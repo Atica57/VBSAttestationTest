@@ -64,3 +64,27 @@ CallEnclaveTest(
 
     return (void*)((ULONG_PTR)(Context) ^ InitialCookie);
 }
+
+void*
+CALLBACK
+CallEnclaveCryptoTest(
+
+)
+{
+    WCHAR String[1024];
+    swprintf_s(String, ARRAYSIZE(String), L"%s\n", L"CallEnclaveCryptoTest started");
+    OutputDebugStringW(String);
+
+
+}
+
+void* 
+CALLBACK
+CallEnclaveAttestationReport(
+
+)
+{
+    WCHAR String[1024];
+    swprintf_s(String, ARRAYSIZE(String), L"%s\n", L"CallEnclaveAttestationReport started");
+    OutputDebugStringW(String);
+}

@@ -12,4 +12,5 @@
 #pragma once
 
 #include <winenclave.h>
+#include <bcrypt.h>
 #include <wchar.h>

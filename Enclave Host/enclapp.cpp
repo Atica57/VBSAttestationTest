@@ -107,6 +107,11 @@ HRESULT Run()
     return S_OK;
 }
 
+HRESULT CryptoTest() {
+
+    return S_OK;
+}
+
 int
 main(
     [[maybe_unused]] _In_ int argc,
@@ -122,6 +127,8 @@ main(
         });
 
     HRESULT hr = Run();
+    //HRESULT hr = CryptoTest();
+    
     if (hr == HRESULT_FROM_WIN32(ERROR_INVALID_IMAGE_HASH))
     {
         wprintf(L"If you developer-signed the DLL, make sure that you have enabled test signing.\n");
