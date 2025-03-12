@@ -15,6 +15,11 @@
 
 #include "precomp.h"
 
+typedef struct ReportData {
+    PVOID Report;
+    UINT32 ReportSize;
+}ReportData;
+
 // VBS enclave configuration
 
 const IMAGE_ENCLAVE_CONFIG __enclave_config = {
@@ -34,6 +39,7 @@ const IMAGE_ENCLAVE_CONFIG __enclave_config = {
 };
 
 ULONG InitialCookie;
+UINT8 MyEnclaveData[1024];
 
 BOOL
 DllMain(
@@ -46,7 +52,14 @@ DllMain(
     UNREFERENCED_PARAMETER(lpvReserved);
 
     if (dwReason == DLL_PROCESS_ATTACH) {
+        //dll에서 console창에 출력하기 위한 설정
+        //AllocConsole(); 
+        //FILE* fp;
+        //freopen_s(&fp, "CONOUT$", "w", stdout);
+        //printf("Console initialized in DLL\n");
+
         InitialCookie = 0xDADAF00D;
+		strcpy_s((char*)MyEnclaveData, sizeof(MyEnclaveData), "This is Enclave for crypto test and attestation test");
     }
 
     return TRUE;
@@ -64,27 +77,64 @@ CallEnclaveTest(
 
     return (void*)((ULONG_PTR)(Context) ^ InitialCookie);
 }
-
-void*
-CALLBACK
-CallEnclaveCryptoTest(
-
-)
-{
-    WCHAR String[1024];
-    swprintf_s(String, ARRAYSIZE(String), L"%s\n", L"CallEnclaveCryptoTest started");
-    OutputDebugStringW(String);
-
-
-}
+//
+//void*
+//CALLBACK
+//CallEnclaveCryptoTest(
+//
+//)
+//{
+//    WCHAR String[1024];
+//    swprintf_s(String, ARRAYSIZE(String), L"%s\n", L"CallEnclaveCryptoTest started");
+//    OutputDebugStringW(String);
+//
+//
+//}
 
 void* 
 CALLBACK
 CallEnclaveAttestationReport(
-
+    _In_ void* Context
 )
 {
     WCHAR String[1024];
     swprintf_s(String, ARRAYSIZE(String), L"%s\n", L"CallEnclaveAttestationReport started");
     OutputDebugStringW(String);
+    //printf("CallEnclaveAttestationReport started\n");
+
+    PVOID Report = NULL;
+    UINT32 BufferSize = 0;
+    UINT32* OutputSize = NULL;
+    ReportData* ReportDT = NULL;
+
+    HRESULT res = EnclaveGetAttestationReport(MyEnclaveData, Report, BufferSize, OutputSize);
+    if (res != S_OK) {
+        //printf("CallEnclaveAttestationReport failed. result is not S_OK\n");
+        return res;
+    }
+    else {
+        //printf("CallEnclaveAttestationReport have return values\n");
+		ReportDT->Report = Report;
+		ReportDT->ReportSize = *OutputSize;
+    }
+    return (void*)ReportDT;
+}
+
+void*
+CALLBACK
+CallEnclaveGetEnclaveInformationTest(
+    //no input!
+)
+{
+    WCHAR String[1024];
+    swprintf_s(String, ARRAYSIZE(String), L"%s\n", L"CallEnclaveAttestationReport started");
+    OutputDebugStringW(String);
+
+    UINT32 InformationSize = 176;
+    ENCLAVE_INFORMATION* EnclaveInformation = NULL;
+    HRESULT res = EnclaveGetEnclaveInformation(InformationSize, EnclaveInformation);
+	if (res != S_OK) {
+		return res;
+	}
+    return (void*)EnclaveInformation;
 }

@@ -18,6 +18,11 @@
 
 #include "precomp.h"
 
+typedef struct ReportData{
+    PVOID Report = NULL;
+    UINT32 ReportSize = 0;
+}ReportData;
+
 HRESULT Run()
 {
     if (!IsEnclaveTypeSupported(ENCLAVE_TYPE_VBS))
@@ -105,36 +110,42 @@ HRESULT Run()
 
 
     // Locate the function in the enclave.
-    PENCLAVE_ROUTINE Routine = reinterpret_cast<PENCLAVE_ROUTINE>(GetProcAddress(reinterpret_cast<HMODULE>(Enclave), "CallEnclaveCryptoTest"));
+    PENCLAVE_ROUTINE Routine = reinterpret_cast<PENCLAVE_ROUTINE>(GetProcAddress(reinterpret_cast<HMODULE>(Enclave), "CallEnclaveAttestationReport"));
     RETURN_LAST_ERROR_IF_NULL(Routine);
 
-    // Call the function. Our test function XOR's its input with a magic number.
+	// Call the function. Attestation Report test.
     ULONG_PTR Input = 0x1234;
-    void* Output;
+    void* ReportPtr = NULL;
+	RETURN_IF_WIN32_BOOL_FALSE(CallEnclave(Routine, reinterpret_cast<void*>(Input), TRUE /* fWaitForThread */, &ReportPtr));
 
-    RETURN_IF_WIN32_BOOL_FALSE(CallEnclave(Routine, reinterpret_cast<void*>(Input), TRUE /* fWaitForThread */, &Output));
-
-    // Verify that it performed the expected calculation.
-    if ((reinterpret_cast<ULONG_PTR>(Output) ^ Input) != 0xDADAF00D)
+    // 제대로 레포트를 받았는지 확인
+    if (!ReportPtr)
     {
         printf("Unexpected result from enclave\n");
     }
-    else {//print Output and Input
-        printf("Output: %llX\n", reinterpret_cast<ULONG_PTR>(Output));
-        printf("Input: %llX\n", Input);
-        printf("Output ^ Input: %llX\n", reinterpret_cast<ULONG_PTR>(Output) ^ Input);
-        printf("Finished!\n");
+    else {//save file 
+        //test - print report size
+		printf("Report Size: %d\n", reinterpret_cast<ReportData*>(ReportPtr)->ReportSize);
+        std::ofstream outFile("AttestationReport.bin", std::ios::binary);
+        if (!outFile)
+        {
+            std::cerr << "Failed to open file for writing." << std::endl;
+        }
+
+        outFile.write((const char*)reinterpret_cast<ReportData*>(ReportPtr)->Report, reinterpret_cast<ReportData*>(ReportPtr)->ReportSize);
+        outFile.close();
     }
 
     // Destructor of "cleanup" variable will terminate and delete the enclave.
+    free(ReportPtr);
 
     return S_OK;
 }
-
-HRESULT CryptoTest() {
-
-    return S_OK;
-}
+//
+//HRESULT CryptoTest() {
+//
+//    return S_OK;
+//}
 
 int
 main(

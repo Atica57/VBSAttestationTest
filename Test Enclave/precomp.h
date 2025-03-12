@@ -14,3 +14,5 @@
 #include <winenclave.h>
 #include <bcrypt.h>
 #include <wchar.h>
+#include <string.h>
+#include <stdio.h>
