@@ -106,55 +106,7 @@ HRESULT Run()
     ////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////////Verify the attestation report//////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////
-    /*
-    PVOID Enclave2 = CreateEnclave(GetCurrentProcess(),
-        nullptr, // Preferred base address
-        0x10000000, // size
-        0,
-        ENCLAVE_TYPE_VBS,
-        &CreateInfo,
-        sizeof(ENCLAVE_CREATE_INFO_VBS),
-        nullptr);
-    RETURN_LAST_ERROR_IF_NULL(Enclave2);
-
-    // Ensure we terminate and delete the enclave even if something goes wrong.
-    auto cleanup2 = wil::scope_exit([&]
-        {
-            // fWait = TRUE means that we wait for all threads in the enclave to terminate.
-            // This is necessary because you cannot delete an enclave if it still has
-            // running threads.
-            LOG_IF_WIN32_BOOL_FALSE(TerminateEnclave(Enclave2, TRUE));
-
-            // Delete the enclave.
-            LOG_IF_WIN32_BOOL_FALSE(DeleteEnclave(Enclave2));
-        });
-
-    // Load enclave module with SEM_FAILCRITICALERRORS enabled to suppress
-    // the error message dialog.
-    {
-        DWORD previousMode = GetThreadErrorMode();
-        SetThreadErrorMode(previousMode | SEM_FAILCRITICALERRORS, nullptr);
-        auto restoreErrorMode = wil::scope_exit([&]
-            {
-                SetThreadErrorMode(previousMode, nullptr);
-            });
-        RETURN_IF_WIN32_BOOL_FALSE(LoadEnclaveImageW(Enclave2, L"vbsenclave.dll"));
-    }
-
-    // Initialize the enclave with one thread.
-    // Once initialized, no more DLLs can be loaded into the enclave.
-    ENCLAVE_INIT_INFO_VBS InitInfo2{};
-
-    InitInfo2.Length = sizeof(ENCLAVE_INIT_INFO_VBS);
-    InitInfo2.ThreadCount = 1;
-
-    RETURN_IF_WIN32_BOOL_FALSE(InitializeEnclave(GetCurrentProcess(),
-        Enclave2,
-        &InitInfo2,
-        InitInfo2.Length,
-        nullptr));
-	*/
-
+    
     // Locate the function in the enclave.
     PENCLAVE_ROUTINE Routine2 = reinterpret_cast<PENCLAVE_ROUTINE>(
             GetProcAddress(reinterpret_cast<HMODULE>(Enclave), "CallEnclaveVerifyAttestationReport"));
