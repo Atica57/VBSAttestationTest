@@ -18,11 +18,6 @@
 
 #include "precomp.h"
 
-typedef struct ReportData{
-    PVOID Report = NULL;
-    UINT32 ReportSize = 0;
-}ReportData;
-
 HRESULT Run()
 {
     if (!IsEnclaveTypeSupported(ENCLAVE_TYPE_VBS))
@@ -85,59 +80,102 @@ HRESULT Run()
         InitInfo.Length,
         nullptr));
 
-    
-    //// Locate the function in the enclave.
-    //PENCLAVE_ROUTINE Routine = reinterpret_cast<PENCLAVE_ROUTINE>(GetProcAddress(reinterpret_cast<HMODULE>(Enclave), "CallEnclaveTest"));
-    //RETURN_LAST_ERROR_IF_NULL(Routine);
-
-    //// Call the function. Our test function XOR's its input with a magic number.
-    //ULONG_PTR Input = 0x1234;
-    //void* Output;
-
-    //RETURN_IF_WIN32_BOOL_FALSE(CallEnclave(Routine, reinterpret_cast<void*>(Input), TRUE /* fWaitForThread */, &Output));
-
-    //// Verify that it performed the expected calculation.
-    //if ((reinterpret_cast<ULONG_PTR>(Output) ^ Input) != 0xDADAF00D)
-    //{
-    //    printf("Unexpected result from enclave\n");
-    //}
-    //else {//print Output and Input
-    //    printf("Output: %llX\n", reinterpret_cast<ULONG_PTR>(Output));
-    //    printf("Input: %llX\n", Input);
-    //    printf("Output ^ Input: %llX\n", reinterpret_cast<ULONG_PTR>(Output) ^ Input);
-    //    printf("Finished!\n");
-    //}
-
-
     // Locate the function in the enclave.
-    PENCLAVE_ROUTINE Routine = reinterpret_cast<PENCLAVE_ROUTINE>(GetProcAddress(reinterpret_cast<HMODULE>(Enclave), "CallEnclaveAttestationReport"));
+    PENCLAVE_ROUTINE Routine = reinterpret_cast<PENCLAVE_ROUTINE>(
+        GetProcAddress(reinterpret_cast<HMODULE>(Enclave), "CallEnclaveGetAttestationReport"));
     RETURN_LAST_ERROR_IF_NULL(Routine);
 
 	// Call the function. Attestation Report test.
     ULONG_PTR Input = 0x1234;
-    void* ReportPtr = NULL;
-	RETURN_IF_WIN32_BOOL_FALSE(CallEnclave(Routine, reinterpret_cast<void*>(Input), TRUE /* fWaitForThread */, &ReportPtr));
+    void* ReportPtr;
+
+    RETURN_IF_WIN32_BOOL_FALSE(CallEnclave(Routine, reinterpret_cast<void*>(Input), TRUE /* fWaitForThread */, &ReportPtr));
 
     // 제대로 레포트를 받았는지 확인
     if (!ReportPtr)
     {
         printf("Unexpected result from enclave\n");
     }
-    else {//save file 
-        //test - print report size
-		printf("Report Size: %d\n", reinterpret_cast<ReportData*>(ReportPtr)->ReportSize);
-        std::ofstream outFile("AttestationReport.bin", std::ios::binary);
-        if (!outFile)
-        {
-            std::cerr << "Failed to open file for writing." << std::endl;
-        }
+    else {//check value
+		//ReportDataInfo* Report = reinterpret_cast<ReportDataInfo*>(ReportPtr);
+		//printf("Report Size: %d\n", Report->ReportSize);
+		//printf("Report: %s\n", Report->Report);
+		printf("Attestation finished.\n");
+    }
 
-        outFile.write((const char*)reinterpret_cast<ReportData*>(ReportPtr)->Report, reinterpret_cast<ReportData*>(ReportPtr)->ReportSize);
-        outFile.close();
+    ////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////Verify the attestation report//////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////
+    /*
+    PVOID Enclave2 = CreateEnclave(GetCurrentProcess(),
+        nullptr, // Preferred base address
+        0x10000000, // size
+        0,
+        ENCLAVE_TYPE_VBS,
+        &CreateInfo,
+        sizeof(ENCLAVE_CREATE_INFO_VBS),
+        nullptr);
+    RETURN_LAST_ERROR_IF_NULL(Enclave2);
+
+    // Ensure we terminate and delete the enclave even if something goes wrong.
+    auto cleanup2 = wil::scope_exit([&]
+        {
+            // fWait = TRUE means that we wait for all threads in the enclave to terminate.
+            // This is necessary because you cannot delete an enclave if it still has
+            // running threads.
+            LOG_IF_WIN32_BOOL_FALSE(TerminateEnclave(Enclave2, TRUE));
+
+            // Delete the enclave.
+            LOG_IF_WIN32_BOOL_FALSE(DeleteEnclave(Enclave2));
+        });
+
+    // Load enclave module with SEM_FAILCRITICALERRORS enabled to suppress
+    // the error message dialog.
+    {
+        DWORD previousMode = GetThreadErrorMode();
+        SetThreadErrorMode(previousMode | SEM_FAILCRITICALERRORS, nullptr);
+        auto restoreErrorMode = wil::scope_exit([&]
+            {
+                SetThreadErrorMode(previousMode, nullptr);
+            });
+        RETURN_IF_WIN32_BOOL_FALSE(LoadEnclaveImageW(Enclave2, L"vbsenclave.dll"));
+    }
+
+    // Initialize the enclave with one thread.
+    // Once initialized, no more DLLs can be loaded into the enclave.
+    ENCLAVE_INIT_INFO_VBS InitInfo2{};
+
+    InitInfo2.Length = sizeof(ENCLAVE_INIT_INFO_VBS);
+    InitInfo2.ThreadCount = 1;
+
+    RETURN_IF_WIN32_BOOL_FALSE(InitializeEnclave(GetCurrentProcess(),
+        Enclave2,
+        &InitInfo2,
+        InitInfo2.Length,
+        nullptr));
+	*/
+
+    // Locate the function in the enclave.
+    PENCLAVE_ROUTINE Routine2 = reinterpret_cast<PENCLAVE_ROUTINE>(
+            GetProcAddress(reinterpret_cast<HMODULE>(Enclave), "CallEnclaveVerifyAttestationReport"));
+    RETURN_LAST_ERROR_IF_NULL(Routine2);
+
+    // Call the function. Attestation Report test.
+    ReportDataInfo* ReportData = reinterpret_cast<ReportDataInfo*>(ReportPtr);
+    void* VerifyOutput;
+
+    RETURN_IF_WIN32_BOOL_FALSE(CallEnclave(Routine2, ReportData, TRUE /* fWaitForThread */, &VerifyOutput));
+
+    // 제대로 verify를 했는지 확인
+	if (FAILED(reinterpret_cast<HRESULT>(VerifyOutput)))
+    {
+        printf("The error is occured during verification\n");
+    }
+    else {//check value
+		printf("HRESULT is S_OK. The attestation report is verified successfully\n");
     }
 
     // Destructor of "cleanup" variable will terminate and delete the enclave.
-    free(ReportPtr);
 
     return S_OK;
 }
@@ -168,6 +206,11 @@ main(
     {
         wprintf(L"If you developer-signed the DLL, make sure that you have enabled test signing.\n");
     }
+	else if (hr == HRESULT_FROM_WIN32(ERROR_NOT_FOUND))
+	{
+        wprintf(L"Element not found.\n");
+		wprintf(L"Make sure that the enclave DLL is in the same directory as the app.\n");
+	}
     else {
         wprintf(L"Success!\n");
     }
