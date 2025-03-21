@@ -119,7 +119,8 @@ HRESULT Run()
     RETURN_IF_WIN32_BOOL_FALSE(CallEnclave(Routine2, ReportData, TRUE /* fWaitForThread */, &VerifyOutput));
 
     // 제대로 verify를 했는지 확인
-	if (FAILED(reinterpret_cast<HRESULT>(VerifyOutput)))
+    HRESULT verify_hr = reinterpret_cast<HRESULT>(VerifyOutput);
+	if (FAILED(verify_hr))
     {
         printf("The error is occured during verification\n");
     }
