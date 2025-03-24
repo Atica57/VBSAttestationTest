@@ -97,8 +97,9 @@ HRESULT Run()
         printf("Unexpected result from enclave\n");
     }
     else {//check value
-		//ReportDataInfo* Report = reinterpret_cast<ReportDataInfo*>(ReportPtr);
-		//printf("Report Size: %d\n", Report->ReportSize);
+		ReportDataInfo* Report = reinterpret_cast<ReportDataInfo*>(ReportPtr);
+        printf("HRESULT: %d\n", Report->hr);
+		printf("Report Size: %d\n", Report->ReportSize);
 		//printf("Report: %s\n", Report->Report);
 		printf("Attestation finished.\n");
     }
