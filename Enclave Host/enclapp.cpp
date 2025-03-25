@@ -81,31 +81,61 @@ HRESULT Run()
         nullptr));
 
     // Locate the function in the enclave.
-    PENCLAVE_ROUTINE Routine = reinterpret_cast<PENCLAVE_ROUTINE>(GetProcAddress(reinterpret_cast<HMODULE>(Enclave), "CallEnclaveTest"));
+    PENCLAVE_ROUTINE Routine = reinterpret_cast<PENCLAVE_ROUTINE>(
+        GetProcAddress(reinterpret_cast<HMODULE>(Enclave), "CallEnclaveGetAttestationReport"));
     RETURN_LAST_ERROR_IF_NULL(Routine);
 
-    // Call the function. Our test function XOR's its input with a magic number.
+	// Call the function. Attestation Report test.
     ULONG_PTR Input = 0x1234;
-    void* Output;
+    void* ReportPtr;
 
-    RETURN_IF_WIN32_BOOL_FALSE(CallEnclave(Routine, reinterpret_cast<void*>(Input), TRUE /* fWaitForThread */, &Output));
+    RETURN_IF_WIN32_BOOL_FALSE(CallEnclave(Routine, reinterpret_cast<void*>(Input), TRUE /* fWaitForThread */, &ReportPtr));
 
-    // Verify that it performed the expected calculation.
-    if ((reinterpret_cast<ULONG_PTR>(Output) ^ Input) != 0xDADAF00D)
+    // 제대로 레포트를 받았는지 확인
+    if (!ReportPtr)
     {
         printf("Unexpected result from enclave\n");
     }
-    else {//print Output and Input
-        printf("Output: %llX\n", reinterpret_cast<ULONG_PTR>(Output));
-        printf("Input: %llX\n", Input);
-        printf("Output ^ Input: %llX\n", reinterpret_cast<ULONG_PTR>(Output) ^ Input);
-        printf("Finished!\n");
+    else {//check value
+		//ReportDataInfo* Report = reinterpret_cast<ReportDataInfo*>(ReportPtr);
+		//printf("Report Size: %d\n", Report->ReportSize);
+		//printf("Report: %s\n", Report->Report);
+		printf("Attestation finished.\n");
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////Verify the attestation report//////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////
+    
+    // Locate the function in the enclave.
+    PENCLAVE_ROUTINE Routine2 = reinterpret_cast<PENCLAVE_ROUTINE>(
+            GetProcAddress(reinterpret_cast<HMODULE>(Enclave), "CallEnclaveVerifyAttestationReport"));
+    RETURN_LAST_ERROR_IF_NULL(Routine2);
+
+    // Call the function. Attestation Report test.
+    ReportDataInfo* ReportData = reinterpret_cast<ReportDataInfo*>(ReportPtr);
+    void* VerifyOutput;
+
+    RETURN_IF_WIN32_BOOL_FALSE(CallEnclave(Routine2, ReportData, TRUE /* fWaitForThread */, &VerifyOutput));
+
+    // 제대로 verify를 했는지 확인
+	if (FAILED(reinterpret_cast<HRESULT>(VerifyOutput)))
+    {
+        printf("The error is occured during verification\n");
+    }
+    else {//check value
+		printf("HRESULT is S_OK. The attestation report is verified successfully\n");
     }
 
     // Destructor of "cleanup" variable will terminate and delete the enclave.
 
     return S_OK;
 }
+//
+//HRESULT CryptoTest() {
+//
+//    return S_OK;
+//}
 
 int
 main(
@@ -122,10 +152,17 @@ main(
         });
 
     HRESULT hr = Run();
+    //HRESULT hr = CryptoTest();
+    
     if (hr == HRESULT_FROM_WIN32(ERROR_INVALID_IMAGE_HASH))
     {
         wprintf(L"If you developer-signed the DLL, make sure that you have enabled test signing.\n");
     }
+	else if (hr == HRESULT_FROM_WIN32(ERROR_NOT_FOUND))
+	{
+        wprintf(L"Element not found.\n");
+		wprintf(L"Make sure that the enclave DLL is in the same directory as the app.\n");
+	}
     else {
         wprintf(L"Success!\n");
     }

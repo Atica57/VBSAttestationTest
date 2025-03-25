@@ -2,3 +2,6 @@ LIBRARY
 
 EXPORTS
         CallEnclaveTest
+        CallEnclaveGetAttestationReport
+        CallEnclaveGetEnclaveInformationTest
+        CallEnclaveVerifyAttestationReport
